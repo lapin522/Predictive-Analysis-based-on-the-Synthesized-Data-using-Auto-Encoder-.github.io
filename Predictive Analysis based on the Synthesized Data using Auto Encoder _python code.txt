@@ -1,0 +1,120 @@
+Python code
+# -*- coding: utf-8 -*-
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+import tensorflow as tf
+import seaborn as sns
+from pylab import rcParams
+from sklearn.model_selection import train_test_split
+from tensorflow import keras
+from keras.models import Model, load_model
+from keras.layers import Input, Dense
+# from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras import regularizers
+from sklearn.manifold import TSNE
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
+
+np.random.seed(1004)
+X = np.random.multivariate_normal(mu, cov, 50000)
+beta = np.random.uniform(low=-0.5, high=0.5, size=101)
+one = np.array([np.ones(50000)])
+x = np.concatenate((one.T,X), axis=1)
+lam = np.matmul(x, beta)
+N = np.empty((50000, 1))
+for i in range(len(lam)):
+    N[i] = np.random.normal(lam[i], 1, 1)    
+
+X_train, X_val, X_test = X_org[:30000], X_org[30000:40000], X_org[40000:50000]
+x_train = X_train.drop(["N"], axis=1)
+x_test = X_test.drop(["N"], axis=1)
+x_org = X_org.drop(["N"], axis=1)
+lam_train = lam[:30000]
+lam_test = lam[40000:50000]
+
+corr = x_ae.corr()
+ax = sns.heatmap(
+        corr,
+        vmin=-1, vmax=1, center=0,
+        cmap=sns.diverging_palette(20, 220, n=200),
+        square=True)
+ax.set_xticklabels(
+        ax.getxticklabels(),
+        horizontalalignment='right')
+i = [0]*25 + [1]*25 + [2]*25 + [3]*25
+j = list(range(25))*4
+f, axes = plt.subplots(4, 25,  sharex=True)
+for var, i, j in zip(var, i, j):
+    sns.distplot(x_train[var],                  
+                 color="skyblue", hist_kws={'edgecolor': 'gray'},
+                 ax = axes[i, j])
+plt.show()
+
+input_dim = X_train.shape[1] 
+encoding_dim = 50
+
+encoder = Dense(encoding_dim, activation="tanh", 
+                activity_regularizer=regularizers.l1(10e-5))(input_layer)
+encoder = Dense(int(encoding_dim / 2), activation="relu")(encoder)
+decoder = Dense(int(encoding_dim ), activation='tanh')(encoder)
+decoder = Dense(input_dim, activation='linear')(decoder)
+autoencoder = Model(inputs=input_layer, outputs=decoder)
+
+nb_epoch = 100
+batch_size = 32
+autoencoder.compile(optimizer='adam', 
+                    loss='mean_squared_error', 
+                    metrics=['accuracy'])
+checkpointer = ModelCheckpoint(filepath="model.h5",
+                               verbose=0,
+                               save_best_only=True)
+tensorboard = TensorBoard(log_dir='./logs',
+                          histogram_freq=0,
+                          write_graph=True,
+                          write_images=True)
+history = autoencoder.fit(X_train, X_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    shuffle=True,
+                    validation_data=(X_val, X_val),
+                    verbose=1,
+                    callbacks=[checkpointer, tensorboard]
+                    ).history
+plt.plot(history['loss'])
+plt.plot(history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'val'], loc='upper right')
+
+plt.plot(history['accuracy'])
+plt.plot(history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'val'], loc='lower left')
+
+ae = autoencoder.predict(np.array(X_train))
+one_ae = np.array([np.ones(30000)])
+x_ae = X_ae.drop(["N"], axis=1)
+x_ae_1 = np.concatenate((one_ae.T, x_ae), axis=1)
+lam_ae = np.matmul(x_ae_1, beta)
+
+lin_reg = LinearRegression()
+lin_reg.fit(x_ae, X_ae["N"])
+pred_ae = lin_reg.predict(x_test)
+MSE_ae = mean_squared_error(X_test["N"], pred_ae)
+MAE_ae = mean_absolute_error(lam_test, pred_ae)
+reg_train = lin_reg.fit(x_train, X_train["N"])
+pred_train = lin_reg.predict(x_test)
+MSE_train = mean_squared_error(X_test["N"], pred_train)
+MAE_train = mean_absolute_error(lam_test, pred_train)
+beta_comp = pd.concat([df_beta_train,df_beta_ae ], axis=1)
+ax = sns.lmplot(x="train", y="ae", data=beta_comp, size=10)
+plt.xlabel("train data coefficintes")
+plt.ylabel("Autoencoder data coefficintes")
+ 
